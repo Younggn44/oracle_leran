@@ -280,16 +280,204 @@ SET AGE = '-100'
 WHERE NO = '1'
 ;
 
+/*
+        4. PRIMARY KEY (기본 키) 제약조건
+            테이블에서 한 행의 정보를 식별하기 위해 사용할 컬럼에 부여하는 제약조건이다.
+            PRIMARY KEY 제약조건은 컬럼 레벨, 테이블 레벨에서 모두 설정이 가능하다.
+            PRIMARY KEY를 테이블에 적용시 하나 만 적용가능(NOT NULL과 UNIQUE 제약이 들어감)
+*/
+-- PRIMARY KEY 제약조건을 설정한 테이블 생성
+CREATE TABLE MEMBER (
+--    NO NUMBER  CONSTRAINT MEMBER_NO_PK PRIMARY KEY,
+    NO NUMBER,
+    ID VARCHAR2(20) NOT NULL,
+    PASSWORE VARCHAR2(20) NOT NULL,
+    NAME VARCHAR2(15)  NOT NULL,
+    GENDER CHAR(3),
+    AGE NUMBER,
+    ENROLL_DATE DATE DEFAULT SYSDATE,
+    CONSTRAINT MEMBER_NO_PK PRIMARY KEY(NO),
+    CONSTRAINT MEMBER_ID_UQ UNIQUE(ID),
+    CONSTRAINT MEMBER_GENDER_CK CHECK (GENDER IN ('남','여')),
+    CONSTRAINT MEMBER_AGE_CK CHECK (AGE >= 0)
+);
 
 
+INSERT INTO MEMBER VALUES(1, 'USER1', '1234', '홍길동', '남', '22', DEFAULT);
+INSERT INTO MEMBER VALUES(2, 'USER2', '5678', '성춘향', '여', '22', DEFAULT);
 
+-- 기본 키 중복으로 에러 발생(UNIQUE 제약 사항)
+INSERT INTO MEMBER VALUES(2, 'USER3', '5678', '이몽룡', '남', '26', DEFAULT);
+-- 기본 키가 NULL을 받아서 에러 발생(NOT NULL 제약 사항)
+INSERT INTO MEMBER VALUES(NULL, 'USER3', '5678', '이몽룡', '남', '26', DEFAULT);
 
+-- 여러 컬럼을 묶어서 하나의 기본 키를 생성(복합키)
+CREATE TABLE MEMBER (
+--    한 테이블에 한 개의 기본 키만 설정할 수 있다.
+--    NO NUMBER PRIMARY KEY,
+--    ID VARCHAR2(20) PRIMARY KEY,
+    NO NUMBER,
+    ID VARCHAR2(20),
+    PASSWORD VARCHAR2(20) NOT NULL,
+    NAME VARCHAR2(15)  NOT NULL,
+    GENDER CHAR(3),
+    AGE NUMBER,
+    ENROLL_DATE DATE DEFAULT SYSDATE,
+    CONSTRAINT MEMBER_NO_PK PRIMARY KEY(NO, ID),
+    CONSTRAINT MEMBER_GENDER_CK CHECK (GENDER IN ('남','여')),
+    CONSTRAINT MEMBER_AGE_CK CHECK (AGE >= 0)
+);
 
+INSERT INTO MEMBER VALUES(1, 'USER1', '1234', '홍길동', '남', '22', DEFAULT);
+INSERT INTO MEMBER VALUES(2, 'USER2', '5678', '성춘향', '여', '22', DEFAULT);
+INSERT INTO MEMBER VALUES(2, 'USER3', '5678', '이몽룡', '남', '22', DEFAULT);
+-- 회원번호, ID가 동일한 값이 이미 존재하기 떄문에 에러가 발생
+INSERT INTO MEMBER VALUES(2, 'USER3', '5678', '임꺽정', '남', '30', DEFAULT);
+-- 기본 키로 설정한 컬럼에 NULL 값이 있으면 에러 발생
+-- 회원번호에 NULL값을 기입했기문에 에러 발생
+INSERT INTO MEMBER VALUES(NULL, 'USER4', '5678', '임꺽정', '남', '30', DEFAULT);
+-- ID에 NULL값을 기입했기문에 에러 발생
+INSERT INTO MEMBER VALUES(4, NULL, '5678', '임꺽정', '남', '30', DEFAULT);
+INSERT INTO MEMBER VALUES(NULL, NULL, '5678', '임꺽정', '남', '30', DEFAULT);
 
+/*
+        5. FOREIGN KEY (외래 키) 제약 조건
+            외래 키 역활을 하는 컬럼에 부여하는 제약조건이다.
+            FOREIGN KEY 제약조건은 컬럼 레벨, 테이블 레벨에서 모두 설정이 가능하다.
+            
+            [표현법]
+                1) 컬럼 레벨
+                    컬럼명 자료형(크기) [CONSTRAINT 제약조건명] REFERENCES 참조할테이블명 [(컬럼명)] [삭제룰]
+                
+                2) 테이블 레벨
+                    [CONSTRAINT 제약조건명] FOREIGN KEY (컬럼명) REFERENCES 참조할테이블명 [(컬럼명)] [삭제룰]
+*/
 
-SELECT * FROM MEMBER;
+-- 회원 등급에 대한 데이터를 저장하는 테이블 (부모 테이블)
+CREATE TABLE MEMBER_GRADE (
+    GRADE_CODE NUMBER PRIMARY KEY,
+    GRADE_NAME VARCHAR2(20) NOT NULL
+    
+);
+
+INSERT INTO MEMBER_GRADE VALUES (10, '일반회원');
+INSERT INTO MEMBER_GRADE VALUES (20, '우수회원');
+INSERT INTO MEMBER_GRADE VALUES (30, '특별회원');
+
+-- FOREIGN KEY 제약조건을 설정한 테이블 생성
+CREATE TABLE MEMBER (
+    NO NUMBER,
+    ID VARCHAR2(20) NOT NULL,
+    PASSWORD VARCHAR2(20) NOT NULL,
+    NAME VARCHAR2(15)  NOT NULL,
+    GENDER CHAR(3),
+    AGE NUMBER,
+    GRADE_ID NUMBER REFERENCES MEMBER_GRADE /*(GRADE_CODE)*/,
+    ENROLL_DATE DATE DEFAULT SYSDATE,
+    CONSTRAINT MEMBER_NO_PK PRIMARY KEY(NO),
+    CONSTRAINT MEMBER_ID_UQ UNIQUE(ID),
+    CONSTRAINT MEMBER_GENDER_CK CHECK (GENDER IN ('남','여')),
+    CONSTRAINT MEMBER_AGE_CK CHECK (AGE >= 0)
+);
+INSERT INTO MEMBER VALUES(1, 'USER1', '1234', '홍길동', '남', '22', 10, DEFAULT);
+
+-- 50이라는 값이 MEMBER_GRADE 테이블에 GRADE_CODE 컬럼에서
+-- 제공하는 값이 아니므로 외래 키 제약조건에 위배되어 에러가 발생한다.
+INSERT INTO MEMBER VALUES(2, 'USER2', '5678', '성춘향', '여', '22', 50, DEFAULT);
+
+-- GRADE_ID 컬럼에 NULL 사용 가능
+INSERT INTO MEMBER VALUES(2, 'USER2', '5678', '성춘향', '여', '22', NULL, DEFAULT);
+
+-- MEMBER 테이블과 MEMBER_GRADE 테이블을 조인 하여
+-- ID, NAME, GRADE_NAME 조회
+-- ANSI
+SELECT M.ID,
+            M.NAME,
+            G.GRADE_NAME
+FROM MEMBER M
+LEFT JOIN MEMBER_GRADE G ON (M.GRADE_ID = G.GRADE_CODE)
+;
+
+-- 오라클
+SELECT M.ID,
+            M.NAME,
+            G.GRADE_NAME
+FROM MEMBER M,MEMBER_GRADE G 
+WHERE M.GRADE_ID = G.GRADE_CODE(+)
+;
+
+-- MEMBER_GRADE 테이블에서 GRADE_CODE가 10인 데이터를 지우기
+-- 자식 테이블의 행들 중에 GRADE_ID 가 10인 행이 존재하기 떄문에
+-- 삭제할수 없다.
+DELETE FROM MEMBER_GRADE
+WHERE GRADE_CODE = 10;
+
+-- MEMBER_GRADE 테이블에서 GRADE_CODE가 30인 데이터를 지우기
+-- 자식 테이블 행들 중에 GRADE_ID가 30인 행이 존재하지 않기 떄문에
+-- 삭제할 수 있다.
+DELETE FROM MEMBER_GRADE
+WHERE GRADE_CODE = 30;
+
+ROLLBACK;
+
+-- ON DELETE SET NULL 옵션이 추가된 자식 테이블 생성
+CREATE TABLE MEMBER (
+    NO NUMBER,
+    ID VARCHAR2(20) NOT NULL,
+    PASSWORD VARCHAR2(20) NOT NULL,
+    NAME VARCHAR2(15)  NOT NULL,
+    GENDER CHAR(3),
+    AGE NUMBER,
+    GRADE_ID NUMBER,
+    ENROLL_DATE DATE DEFAULT SYSDATE,
+    CONSTRAINT MEMBER_NO_PK PRIMARY KEY(NO),
+    CONSTRAINT MEMBER_ID_UQ UNIQUE(ID),
+    CONSTRAINT MEMBER_GENDER_CK CHECK (GENDER IN ('남','여')),
+    CONSTRAINT MEMBER_AGE_CK CHECK (AGE >= 0),
+    CONSTRAINT MEMBER_GRADE_ID_FK FOREIGN KEY (GRADE_ID) REFERENCES MEMBER_GRADE (GRADE_CODE) ON DELETE SET NULL
+);
+
+INSERT INTO MEMBER VALUES(1, 'USER1', '1234', '홍길동', '남', '22', 10, DEFAULT);
+INSERT INTO MEMBER VALUES(2, 'USER2', '1234', '성춘향', '여', '22', NULL, DEFAULT);
+
+-- MEMBER_GRADE 테이블에서 GRADE_CODE가 10인 데이터를 지우기
+DELETE FROM MEMBER_GRADE
+WHERE GRADE_CODE = 10;
+
+ROLLBACK;
+
+-- ON DELET CASCADE 옵션이 추가된 자식 테이블 생성
+CREATE TABLE MEMBER (
+    NO NUMBER,
+    ID VARCHAR2(20) NOT NULL,
+    PASSWORD VARCHAR2(20) NOT NULL,
+    NAME VARCHAR2(15)  NOT NULL,
+    GENDER CHAR(3),
+    AGE NUMBER,
+    GRADE_ID NUMBER,
+    ENROLL_DATE DATE DEFAULT SYSDATE,
+    CONSTRAINT MEMBER_NO_PK PRIMARY KEY(NO),
+    CONSTRAINT MEMBER_ID_UQ UNIQUE(ID),
+    CONSTRAINT MEMBER_GENDER_CK CHECK (GENDER IN ('남','여')),
+    CONSTRAINT MEMBER_AGE_CK CHECK (AGE >= 0),
+    CONSTRAINT MEMBER_GRADE_ID_FK FOREIGN KEY (GRADE_ID) REFERENCES MEMBER_GRADE (GRADE_CODE) ON DELETE CASCADE
+);
+
+INSERT INTO MEMBER VALUES(1, 'USER1', '1234', '홍길동', '남', '22', 10, DEFAULT);
+INSERT INTO MEMBER VALUES(2, 'USER2', '1234', '성춘향', '여', '22', NULL, DEFAULT);
+
+-- MEMBER_GRADE 테이블에서 GRADE_CODE가 10인 데이터를 지우기
+DELETE FROM MEMBER_GRADE
+WHERE GRADE_CODE = 10;
+
+COMMIT;
+
+DROP TABLE MEMBER_GRADE;
+SELECT * FROM MEMBER_GRADE;
 
 DROP TABLE MEMBER;
+SELECT * FROM MEMBER;
+
 
 SELECT UC.CONSTRAINT_NAME,
             UC.TABLE_NAME,
@@ -301,81 +489,47 @@ JOIN USER_CONS_COLUMNS UCC ON (UC.CONSTRAINT_NAME = UCC.CONSTRAINT_NAME)
 WHERE UC.TABLE_NAME = 'MEMBER';
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+/*
+        <SUBQUERY를 이용한 테이블 생성>
+            서브 쿼리를 이용해서 SELECT의 조회 결과로 테이블을 생성하는 구문이다.
+            컬럼명과 데이터 타입, 값이 복사되고, 제약조건은 NOT NULL만 복사된다.
+*/
+-- EMPLOYEE 테이블을 복사한 새로운 테이블 생성
+-- 컬럼, 데이터 타입, 값, NOT NULL 제약조건 복사
+CREATE TABLE EMP_COPY 
+AS SELECT *
+FROM EMPLOYEE;
+
+-- MEMBER 테이블을 복사한 새로운 테이블 생성
+-- 컬럼, 데이터 타입, 값, NOT NULL 제약조건 복사
+CREATE TABLE MEM_COPY
+AS SELECT*
+     FROM MEMBER;
+     
+-- EMPLOYEE 테이블을 복사한 새로운 테이블 생성
+-- 컬럼, 데이터 타입, 값, NOT NULL 제약조건 복사
+CREATE TABLE EMP_COPY 
+AS SELECT *
+    FROM EMPLOYEE
+    WHERE 1 = 0;
+
+-- EMPLOYEE 테이블에서 사번, 직원명, 급여, 연봉을 저장하는 테이블을 생성
+-- SELECT 절에 산술연산 또는 함수식이 기술된 경우에는 별칭을 지정해야 한다.
+CREATE TABLE EMP_COPY
+AS SELECT EMP_ID 사번,
+                EMP_NAME 직원명,
+                SALARY 급여,
+                SALARY * 12 연봉
+    FROM EMPLOYEE;
+
+
+DROP TABLE EMP_COPY;
+
+SELECT * FROM EMP_COPY;
+
+DROP TABLE MEM_COPY;
+DROP TABLE EMP_COPY;
+ROLLBACK;
 
 
 
