@@ -107,155 +107,47 @@ AS SELECT EMP_ID,
 -- 사번, 직원명, 부서 코드, 입사일 삽입하고
 -- EMP_MANAGER 테이블에 부서 코드가 D1인 직원들의
 -- 사번, 직원명, 관리자 사번을 조회하여 삽입한다.
-SELECT EMP_ID, EMP_NAME, DEPT_CODE, MANAGER_ID, HIRE_DATE
-FROM EMPLOYEE
-WHERE DEPT_CODE = 'D1';
 
 
+INSERT ALL
+INTO EMP_DEPT VALUES(EMP_ID, EMP_NAME, DEPT_CODE, HIRE_DATE)
+INTO EMP_MANAGER VALUES(EMP_ID, EMP_NAME, MANAGER_ID)
+    SELECT EMP_ID, EMP_NAME, DEPT_CODE, MANAGER_ID, HIRE_DATE
+    FROM EMPLOYEE
+    WHERE DEPT_CODE = 'D1';
 
 SELECT * FROM EMP_DEPT;
 SELECT * FROM EMP_MANAGER;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+DROP TABLE EMP_DEPT;
+DROP TABLE EMP_MANAGER;
+
+-- 표현법 2)
+-- 테스트할 테이블 생성(테이블 구조만 복사)
+CREATE TABLE EMP_OLD
+AS SELECT EMP_ID, EMP_NAME, SALARY, HIRE_DATE
+    FROM EMPLOYEE
+    WHERE 1 = 0;
+
+CREATE TABLE EMP_NEW
+AS SELECT EMP_ID, EMP_NAME, SALARY, HIRE_DATE
+    FROM EMPLOYEE
+    WHERE 1 = 0;
+
+-- EMPLOYEE 테이블의 입사일을 기준으로
+-- 2000년 1월 1일 이전에 입사한 사원의 정보는 EMP_OLD 테이블에 삽입하고
+-- 2000년 1월 1일 이후에 입사한 사원의 정보는 EMP_NEW 테이블에 삽입한다.
+
+INSERT ALL
+WHEN HIRE_DATE < '2000/01/01' THEN 
+    INTO EMP_OLD VALUES(EMP_ID, EMP_NAME, SALARY, HIRE_DATE)
+WHEN HIRE_DATE >= '2000/01/01' THEN 
+    INTO EMP_NEW VALUES(EMP_ID, EMP_NAME, SALARY, HIRE_DATE)
+SELECT EMP_ID, EMP_NAME, SALARY, HIRE_DATE
+FROM EMPLOYEE;
+
+SELECT * FROM EMP_OLD;
+SELECT * FROM EMP_NEW;
+
+DROP TABLE EMP_OLD;
+DROP TABLE EMP_NEW;
