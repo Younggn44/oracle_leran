@@ -192,54 +192,233 @@ AS SELECT EMP_ID,
     FROM EMPLOYEE;
 
 -- INSERT 
+-- 산술 연산으로 정의된 컬럼은 데이터 삽입이 불가능
 INSERT INTO V_EMP_SAL 
 VALUES ('100','홍길동','231115-3333333',3000000, 3600000); -- 급여를 참고해서 만든 '연봉' 열에 데이터를 기입할수 없다
 
+-- 산술 연산과 무관한 컬럼은 데이터 삽입이 불가능
 INSERT INTO V_EMP_SAL(EMP_ID, EMP_NAME, EMP_NO, SALARY)
 VALUES ('100','홍길동','231115-3333333',3000000);
+
+-- UPDATE
+-- 산술 연산으로 정의된 컬럼은 데이터 변경이 불가능
+UPDATE V_EMP_SAL
+SET "연봉" = 50000000
+WHERE EMP_ID = 100;
+
+-- 산술 연산과 무관한 컬럼은 데이터 변경이 가능
+UPDATE V_EMP_SAL
+SET SALARY = 5000000
+WHERE EMP_ID = 100;
+
+--DELETE
+DELETE 
+FROM V_EMP_SAL
+WHERE "연봉" = 60000000;
 
 SELECT * FROM V_EMP_SAL
 ORDER BY EMP_ID;
 
+SELECT * FROM EMPLOYEE;
+
+-- 4) 그룹 함수나 GROUP BY 절을 포함한 경우
+-- 부서별 급여의 합계, 급여 평균을 조회하는 뷰를 생성
+CREATE OR REPLACE VIEW V_EMP_SAL("부서 코드", "급여의 합계", "급여 평균")
+AS SELECT NVL(DEPT_CODE,'부서 없음'),
+            SUM(SALARY),
+            FLOOR(AVG(SALARY))
+FROM EMPLOYEE
+GROUP BY DEPT_CODE
+ORDER BY DEPT_CODE;
+
+-- INSERT
+INSERT INTO V_EMP_SAL VALUES ('D0', 8000000, 4000000); --에러 발생
+INSERT INTO V_EMP_SAL("부서 코드") VALUES ('D0');
+
+-- UPDATE
+
+UPDATE V_EMP_SAL
+SET "급여의 합계" = 12000000
+WHERE "부서 코드" = 'D1';
+-- 에러 발생 : 뷰에 대한 데이터 조작이 부적합합니다
+UPDATE V_EMP_SAL
+SET "부서 코드" = 'D0'
+WHERE "부서 코드" = 'D1';
+-- 에러 발생 : 뷰에 대한 데이터 조작이 부적합합니다
+
+-- DELETE
+DELETE
+FROM V_EMP_SAL
+WHERE "부서 코드" = 'D1';
+
+SELECT * FROM V_EMP_SAL;
+
+SELECT * FROM EMPLOYEE;
+
+
+-- 5) DISTINCT를 포함한 경우
+CREATE VIEW V_EMP_JOB
+AS SELECT DISTINCT JOB_CODE
+    FROM EMPLOYEE;
+
+SELECT * FROM V_EMP_JOB;
+
+-- INSERT
+INSERT INTO  V_EMP_JOB VALUES ('J8');
+-- 중복을 제거한 항이여서 하나의 행만 존재하지 않기 떄문에
+
+-- UPDATE
+UPDATE V_EMP_JOB
+SET JOB_CODE = 'J8'
+WHERE V_EMP_JOB.JOB_CODE = 'J7';
+
+--DELETE
+DELETE 
+FROM V_EMP_JOB
+WHERE JOB_CODE = 'J7';
+
+-- 6) JOIN을 이용해 여러 테이블을 연결한 경우
+-- 직원들의 사번, 직원명, 주민번호, 부서명 조회하는 뷰를 생성
+CREATE OR REPLACE VIEW  V_EMP_DEPT
+AS SELECT E.EMP_ID,
+            E.EMP_NAME,
+            E.EMP_NO,
+            D.DEPT_TITLE
+FROM EMPLOYEE E
+JOIN DEPARTMENT D ON (E.DEPT_CODE = D.DEPT_ID);
+
+-- INSERT
+INSERT INTO V_EMP_DEPT
+VALUES (100, '홍길동', '941115-1111111', '인사부'); -- 에러 발생
+
+INSERT INTO V_EMP_DEPT (EMP_ID, EMP_NAME, EMP_NO)
+VALUES (100, '홍길동', '941115-1111111');
+
+-- UPDATE
+UPDATE V_EMP_DEPT
+SET DEPT_TITLE = '개발팀'
+WHERE EMP_ID = '200';
+
+UPDATE V_EMP_DEPT
+SET EMP_NAME = '김철수'
+WHERE EMP_ID = '200';
+
+-- 에러 발생
+UPDATE V_EMP_DEPT
+SET DEPT_TITLE = '개발팀'
+WHERE EMP_ID = '200';        
+
+-- DELETE
+-- 서브 쿼리의 FROM절에 기술한 테이블에만 영향을 미친다.
+DELETE 
+FROM V_EMP_DEPT
+WHERE EMP_ID = 200;
+
+DELETE 
+FROM V_EMP_DEPT
+WHERE DEPT_TITLE = '총무부';
+
+SELECT  * FROM V_EMP_DEPT
+ORDER BY EMP_ID;
+
+SELECT  * FROM EMPLOYEE
+ORDER BY EMP_ID;
+
+SELECT * FROM DEPARTMENT;
+
 ROLLBACK;
 
-- 그룹 함수나 GROUP BY 절을 포함한 경우
-           - DISTINCT를 포함한 경우
-           - JOIN을 이용해 여러 테이블을 연결한 경우
+/*
+        5. VIEW 옵션
+*/
+-- 1) OR REPLACE
+CREATE OR REPLACE VIEW V_EMP_SAL
+AS SELECT EMP_NAME, SALARY, HIRE_DATE
+    FROM EMPLOYEE;
+
+SELECT * FROM USER_VIEWS;
+
+-- 2) NOFORCE / FORCE
+-- TEST 테이블을 생성한 이후부터 VIEW를 생성할 수 있다.
+CREATE /* NOFORCE */ VIEW V_TEST_01
+AS SELECT *
+    FROM TEST;
+
+-- TEST 테이블을 생성하지 않아도 VIEW를 생성할 수 있다.
+CREATE FORCE VIEW V_TEST_02
+AS SELECT *
+    FROM TEST;
+
+-- 단, TEST 테이블을 생성한 이후 부터 VIEW 조회 가능
+SELECT * FROM V_TEST_02;
+
+CREATE TABLE TEST (
+    TNO NUMBER,
+    TNAME VARCHAR2(20)
+);
+
+SELECT * FROM V_TEST_01;
+
+-- 3) WITH CHECK OPTION
+CREATE VIEW V_EMP 
+AS SELECT *
+    FROM EMPLOYEE
+    WHERE SALARY >= 3000000;
+
+-- 사번이 200인 사원의 급여를 200만원으로 변경
+-- 서브 쿼리의 조건에 부합하지 않아도 변경이 가능하다.
+UPDATE V_EMP
+SET SALARY = '2000000'
+WHERE EMP_ID = 200;
 
 
+CREATE OR REPLACE VIEW V_EMP 
+AS SELECT *
+    FROM EMPLOYEE
+    WHERE SALARY >= 3000000
+WITH CHECK OPTION;
 
+-- 사번이 200인 사원의 급여를 200만원으로 변경
+-- 서브 쿼리의 조건에 부합하지 않기 떄문에 변경이 불가능하다.
+UPDATE V_EMP
+SET SALARY = '2000000'
+WHERE EMP_ID = 200;
 
+-- 사번이 200인 사원의 급여를 400만원으로 변경
+-- 서브 쿼리의 조건에 부합하기 때문에 변경이 가능하다.
+UPDATE V_EMP
+SET SALARY = 4000000
+WHERE EMP_ID = 200;
 
+SELECT * FROM V_EMP;
+SELECT * FROM EMPLOYEE;
 
+ROLLBACK;
 
+-- 4. WITH READ ONLY
+CREATE VIEW V_DEPT
+AS SELECT *
+    FROM DEPARTMENT
+WITH READ ONLY;    
 
+-- SELECT
+SELECT * FROM V_DEPT;
 
+-- INSERT
+INSERT INTO V_DEPT VALUES ('D0', '개발부', 'L2');
 
+-- UPDATE
+UPDATE V_DEPT
+SET DEPT_TITLE = '개발부'
+WHERE DEPT_ID = 'D1';
 
+-- DELETE
+DELETE 
+FROM V_DEPT
+WHERE DEPT_ID = 'D1';
 
+/*
+        6. VIEW 삭제
+*/
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+DROP VIEW V_TEST_02;
